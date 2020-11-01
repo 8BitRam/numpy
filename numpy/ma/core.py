@@ -1918,16 +1918,65 @@ def masked_where(condition, a, copy=True):
     masked_array(data=[--, 1, --, --],
                  mask=[ True, False,  True,  True],
            fill_value=999999)
+    
+    When dealing with a 'condition' that does not match the dimensions of 'a', adding a np.newaxis will np.broadcast_to() 'condition' to the shape of 'a'.
+    
+    >>> a = np.array([[0,1],
+            [2,3],
+            [4,5]])
+    >>> cond = np.array([True, False])
+    >>> a = ma.masked_where(cond[np.newaxis, :], a)
+    >>> a
+    masked_array(data=[[--,1],[--,3],[--,5]],
+            mask = [[True,False],[True,False],[True,False]],
+            fill_value=999999)
+    >>> b = np.array([[0,1],
+            [2,3],
+            [4,5]])
+    >>> cond = np.array([False,True,False])
+    >>> b = ma.masked_where(cond[:, np.newaxis], b)
+    >>> b 
+    masked_array(data=[[0,1],[--,--],[4,5]],
+            mask = [[False,False],[True,True],[False,False]],
+            fill_value=999999)
 
     """
     # Make sure that condition is a valid standard-type mask.
     cond = make_mask(condition, shrink=False)
     a = np.array(a, copy=copy, subok=True)
-
+    
     (cshape, ashape) = (cond.shape, a.shape)
     if cshape and cshape != ashape:
-        raise IndexError("Inconsistent shape between the condition and the input"
-                         " (got %s and %s)" % (cshape, ashape))
+        #Attempt to broadcast condition to match a's shape
+        (cndim, andim) = (condition.ndim, a.ndim)
+        if cndim and cndim == andim:
+            castflg = False
+            #check for a matching value in condition's and a's shape tuples
+            i = 0
+            for adim in ashape:
+                if adim == cshape[i]:
+                    castflg = True  
+                    condb = np.broadcast_to(condition, a.shape)
+                i += 1
+
+        else: # number of dimension did not match
+            raise IndexError("Inconsistent shape between the condition and the input"
+                            " (got %s and %s)" % (cshape, ashape),
+                            "Shaping with np.broadcast_to(condition, a) failed -"
+                            "Number of dimensions did not match"
+                            " (got %s and %s)" % (cndim, andim))
+        if castflg == False: 
+            raise IndexError("Inconsistent shape between the condition and the input"
+                            " (got %s and %s)" % (cshape, ashape))
+
+        cond = make_mask(condb, shrink=False) 
+        cbshape = cond.shape
+        if cbshape and cbshape != ashape:
+            raise IndexError("Inconsistent shape between the condition and the input"
+                            " (got %s and %s)" % (cshape, ashape),
+                            "Shaping with np.broadcast_to(condition, a) failed"
+                            " (got %s and %s)" % (cbshape, ashape))
+
     if hasattr(a, '_mask'):
         cond = mask_or(cond, a._mask)
         cls = type(a)
