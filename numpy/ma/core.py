@@ -1827,6 +1827,9 @@ def masked_where(condition, a, copy=True):
 
     Return `a` as an array masked where `condition` is True.
     Any masked values of `a` or `condition` are also masked in the output.
+    If `condition` does not match the shape of `a` but has one dimension in `a`
+    that matches, `condition` can be expanded using an np.newaxis to broadcast_to() the 
+    `condition` to the correct shape of `a` (See the final example for more detail).
 
     Parameters
     ----------
