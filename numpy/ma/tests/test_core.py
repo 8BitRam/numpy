@@ -4072,6 +4072,42 @@ class TestMaskedArrayFunctions:
         y = np.arange(5)
         assert_raises(IndexError, np.ma.masked_where, y > 6, x)
 
+    def test_masked_where_broadcast_to(self):
+        # test that the broadcast_to is called properly within masked_where
+        # when shape does not match (see issue #17605)
+        a = np.array([[1.,2.,3.],
+                    [4.,5.,6.],
+                    [7.,8.,9.],
+                    [10.,11.,12.],
+                    [13.,14.,15.]]) # (5L, 3L)
+        am = [[1,0,1],[1,0,1],[1,0,1],[1,0,1],[1,0,1]]
+        ae = masked_array(a,mask=am) # a's expected array
+        conda = np.array([True, False, True])
+        #Call newaxis in the position of the undetermined shape (i.e. 5L is not defined in condition)
+        ar = np.ma.masked_where(conda[np.newaxis, :], a) # a's resulting masked array
+        assert_equal(ar, ae)
+        b = np.array([[0.,2.,4.,6.,8.],
+                    [1.,3.,5.,7.,9.],
+                    [10.,11.,12.,13.,14.]]) #(3L, 5L)
+        bm = [[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0]]
+        be = masked_array(b,mask=bm) # b's expected array
+        condb = np.array([False, True, False])
+        br = np.ma.masked_where(condb[:, np.newaxis], b)  # b's resulting masked array
+        assert_equal(br, be)
+
+    def test_masked_where_broadcast_to_error(self):
+        # test when the broadcast_to is called improperly within masked_where
+        # when shape does not match (see issue #17605)
+        a = np.array([[1.,2.,3.],
+                    [4.,5.,6.],
+                    [7.,8.,9.],
+                    [10.,11.,12.],
+                    [13.,14.,15.]]) # (5L, 3L)
+        conda = np.array([True, False, True])
+        #Call newaxis in the wrong position of the undetermined shape (i.e. cond.shape(3L,np,newaxis))
+        assert_raises(IndexError, np.ma.masked_where, conda[:, np.newaxis], a)
+
+
     def test_masked_otherfunctions(self):
         assert_equal(masked_inside(list(range(5)), 1, 3),
                      [0, 199, 199, 199, 4])
