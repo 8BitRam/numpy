@@ -1,0 +1,31 @@
+`numpy.ma.masked_where` attempts a `numpy.broadcast_to` when shape does not match
+------------------------------------------------------
+
+It is still necessary to have 'condition' dimension within shape to match the
+same 'a' dimension within shape [Ex. condition.shape-(,2L) | a.shape-(3L,2L)].
+'condition' must be cast into the proper dimensions using np.newaxis
+to match the dimensions of 'a'. This is only attempted if 'condition' 
+shape does not match 'a' shape. If the shape still does not match, raise an 
+IndexError and report 'condition' & 'a' shape, before and after `broadcast_to`.
+If the dimensions do not match, this will also be reported in the IndexError.
+
+.. code:: python
+
+    >>> a = np.array([[0,1],
+            [2,3],
+            [4,5]])
+    >>> cond = np.array([True, False])
+    >>> a = ma.masked_where(cond[np.newaxis, :], a)
+    >>> a
+    masked_array(data=[[--,1],[--,3],[--,5]],
+            mask = [[True,False],[True,False],[True,False]],
+            fill_value=999999)
+    >>> b = np.array([[0,1],
+            [2,3],
+            [4,5]])
+    >>> cond = np.array([False,True,False])
+    >>> b = ma.masked_where(cond[:, np.newaxis], b)
+    >>> b 
+    masked_array(data=[[0,1],[--,--],[4,5]],
+            mask = [[False,False],[True,True],[False,False]],
+            fill_value=999999)
